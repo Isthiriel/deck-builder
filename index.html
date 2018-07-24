@@ -10,6 +10,7 @@
   .card-name { }
   .card-count { width: 2rem; text-align: right; }
   .card-price { width: 3rem; text-align: right; }
+  .card-illegal { text-decoration: line-through; }
   .input-group > span.twitter-typeahead { flex: 1 1 auto; width: 1%; }
   .input-group > span.twitter-typeahead:not(:last-child) > .form-control { border-top-right-radius: 0; border-bottom-right-radius: 0; }
   .card-columns#deck-content {
@@ -21,7 +22,7 @@
   </style>
 </head>
 <body>
-<nav class="navbar fixed-top navbar-expand-sm">
+<nav class="navbar fixed-top navbar-expand-sm bg-white border-bottom border-primary">
   <a class="navbar-brand" href="#">Deck Validator</a>
   <button class="navbar-toggler" type="button" data-toggle="collapse" data-target="#navbarSupportedContent" aria-controls="navbarSupportedContent" aria-expanded="false" aria-label="Toggle navigation">
   <span class="navbar-toggler-icon"></span>
@@ -16692,7 +16693,20 @@ const prices = {
   "Metallic Sliver": 0.001,
   "Heart Sliver": 0.001,
   "Clot Sliver": 0.001
-};    
+};
+const basic_lands = [
+  'Forest', 'Island', 'Mountain', 'Plains', 'Swamp',
+  'Snow-Covered Forest', 'Snow-Covered Island', 'Snow-Covered Mountain',
+  'Snow-Covered Plains', 'Snow-Covered Swamp',
+  'Waste',
+  ];
+for (let c of basic_lands) {
+  prices[c] = 0;
+}
+for (let c of banlist) {
+  if (typeof prices[c] != 'undefined')
+    delete prices[c];
+}   
 </script>
 <script>
 google.charts.load('current', { 'packages': [ 'corechart', ], });
@@ -16738,7 +16752,7 @@ class CardList {
   }
   toString() {
     return this.cardList.map(function(c) { // c => (c[0] ? `${c[0]} ${c[1]}` : '')
-      if (c[0] < 1)
+      if (c[0] < 1 || c[1] == '')
         return '';
       return `${c[0]} ${c[1]}`;
     }).join("\n");
@@ -16822,13 +16836,15 @@ function cardPrice(n) {
 
 function htmlCardName(n, c) {
   let price = cardPrice(n);
-  if (isNaN(price))
+  let legality = '';
+  if (isNaN(price)) {
     price = 'NL';
-  else if (price === 0)
+    legality = 'card-illegal text-warning';
+  } else if (price === 0)
     price = '';
   else
     price = price.toFixed(2);
-  return `<div class='d-flex flex-row'><div class='card-count'>${c}</div><div class='flex-grow-1 card-name mx-2'>${n}</div><div class='card-price'>${price}</div></div>`
+  return `<div class='d-flex flex-row ${legality}'><div class='card-count'>${c}</div><div class='flex-grow-1 card-name mx-2'>${n}</div><div class='card-price'>${price}</div></div>`
 }
 
 function refreshList() {
@@ -16861,9 +16877,10 @@ function refreshList() {
   }
   $('#section-commander .card-body').html(commander_html);
 
+  let illegal_cards = $('.card-illegal').length;
   let deck_value = card_list.value();
   $('#card-value').text(deck_value.toFixed(2));
-  if (deck_value > 3) {
+  if (deck_value > 3 || illegal_cards > 0) {
     $('#card-value').addClass('text-danger');
   } else {
     $('#card-value').removeClass('text-danger');
@@ -16872,19 +16889,6 @@ function refreshList() {
 }
 
 $(function() {
-  let basic_lands = [
-    'Forest', 'Island', 'Mountain', 'Plains', 'Swamp',
-    'Snow-Covered Forest', 'Snow-Covered Island', 'Snow-Covered Mountain',
-    'Snow-Covered Plains', 'Snow-Covered Swamp',
-    'Waste',
-    ];
-  for (let c of basic_lands) {
-    prices[c] = 0;
-  }
-  for (let c of banlist) {
-    if (typeof prices[c] != 'undefined')
-      delete prices[c];
-  }
   let cardnames = Object.getOwnPropertyNames(prices);
   let dataset = cardnames.map(n => ({ 'name': n, 'price': prices[n], }));
   let engine_3dh = new Bloodhound({
